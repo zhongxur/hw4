@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Customs — App check</title>
+<style>
+  :root { --blue:#00356b; --ink:#101a2b; --muted:#4a5568; --paper:#f6f2e9; --line:#e2dccd; --ok:#1f7a4d; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, system-ui, -apple-system, sans-serif; color:var(--ink); background:var(--paper); line-height:1.55; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-family: Georgia, serif; color: var(--blue); font-size: 2.2rem; margin: 0 0 4px; }
+  h2 { font-family: Georgia, serif; color: var(--blue); margin: 0 0 8px; font-size: 1.45rem; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  nav.toc { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 18px; margin-bottom:28px; }
+  nav.toc a { color: var(--blue); }
+  section { background:#fff; border:1px solid var(--line); border-radius:18px; padding:22px; margin-bottom:28px; }
+  .tag { display:inline-block; font:700 .72rem/1 ui-monospace, monospace; letter-spacing:.1em; text-transform:uppercase; color:#fff; background:var(--blue); padding:5px 8px; border-radius:6px; margin-bottom:10px; }
+  figure { margin: 14px 0 0; }
+  figure img { width:100%; height:auto; border-radius:12px; border:1px solid var(--line); display:block; }
+  figcaption { color: var(--muted); font-size: .95rem; margin-top: 8px; }
+  .proves { border-left: 4px solid var(--ok); background: #eef7f1; padding: 10px 14px; border-radius: 8px; margin: 12px 0 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
+  pre { background:#0f1b2d; color:#dfe7f3; padding:12px 14px; border-radius:10px; overflow-x:auto; }
+  .two { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Campus Customs — app check</h1>
+  <p class="sub">Problem 11 · screenshots of the running site (React on :5173, FastAPI + agent on :8000,
+    model gpt-5.6-luna via Portkey), captured 2026-09-29. Each check has a heading, a screenshot and what it proves.</p>
+
+  <nav class="toc">
+    <strong>Checks:</strong>
+    <a href="#inventory">1. Inventory lookup in chat</a> ·
+    <a href="#search">2. Dynamic search cards</a> ·
+    <a href="#usability">3. Usability features (Problem 9)</a> ·
+    <a href="#memory">Bonus: saved chat history</a>
+  </nav>
+
+  <section id="inventory">
+    <span class="tag">Check 1</span>
+    <h2>Chat checks the inventory level of an item</h2>
+    <p>On the <em>Boola Boola T Shirt</em> page, a guest asks: “How many of this are left in XL? And is L in stock?”
+      The shopper never names the product; Dan gets it from the page context.</p>
+    <figure>
+      <img src="app_check_images/inventory.png" alt="Chat answering: 2 left in XL, L is sold out, for the Boola Boola T Shirt">
+      <figcaption>Dan answers “There are <strong>2 left in XL</strong>. <strong>L is sold out</strong>” and offers
+        in-stock T-shirt alternatives. The size grid on the page shows the same numbers (XL “only 2”, L “sold out”).</figcaption>
+    </figure>
+    <p>Database at the time of the screenshot:</p>
+<pre>$ sqlite3 data/campus_customs.db "SELECT size, quantity FROM inventory WHERE product_id='boola-boola-t-shirt'"
+XS|12   S|12   M|15   L|0   XL|2   XXL|20          (price in catalogue: 32.0)</pre>
+    <p class="proves"><strong>Proves:</strong> the agent called <code>check_stock</code> on the product in view and
+      reported the exact DB quantity (2) and an honest “sold out” for L (0). Nothing was invented. The price on
+      the card ($32) also matches the catalogue.</p>
+  </section>
+
+  <section id="search">
+    <span class="tag">Check 2</span>
+    <h2>Dynamic search-result cards after a category question</h2>
+    <p>From the home page, a guest asks “What hoodies do you have?”.</p>
+    <figure>
+      <img src="app_check_images/search_cards.png" alt="Products page titled Hoodies filled with cards from the chat">
+      <figcaption>The agent returns <code>show_on_page = true</code>, <code>search_label = "Hoodies"</code> and 12
+        product ids. The site switches to the Products page, shows the “Results from your chat with Dan” banner
+        and renders those cards (image, name, price, short description). Dan says “27 hoodies in stock — showing 12”
+        because the search tool reports <code>total_matches</code>.</figcaption>
+    </figure>
+    <figure>
+      <img src="app_check_images/search_card_detail.png" alt="Detail page opened by clicking a chat-loaded card">
+      <figcaption>Clicking one of those chat-loaded cards opens the same single-item page as Problem 3: large image
+        on the left, full description, price, colours and per-size stock on the right.</figcaption>
+    </figure>
+    <p class="proves"><strong>Proves:</strong> the structured API contract works end to end. The agent picks the ids,
+      the backend builds the cards from SQLite, the front end renders them on the page, and every card still links
+      to its detail view.</p>
+  </section>
+
+  <section id="usability">
+    <span class="tag">Check 3</span>
+    <h2>Usability features from Problem 9</h2>
+
+    <h3>a) Live-stock size picker + “Find me something similar” (front end #2) → <code>find_alternatives</code> tool (agent #3)</h3>
+    <div class="two">
+      <figure>
+        <img src="app_check_images/usability_size_picker.png" alt="Size picker with XL sold out">
+        <figcaption>On the <em>Baseball Left Chest Crewneck</em>, XS and XL are struck through as sold out. Choosing XL
+          shows “✕ XL is sold out.” and the main button turns into “Find me something similar in XL”.</figcaption>
+      </figure>
+      <figure>
+        <img src="app_check_images/usability_alternatives.png" alt="Crewnecks available in XL from the alternatives tool">
+        <figcaption>One tap asks Dan, who calls <code>find_alternatives</code> and returns similar crewnecks that
+          <em>are</em> in stock in XL, same category and price. The results appear on the page as “Crewnecks available in XL”.</figcaption>
+      </figure>
+    </div>
+    <p class="proves"><strong>Proves:</strong> a sold-out size turns into a way to another sale instead of a dead end.
+      The shopper sees availability before asking, and the alternatives come from the database.</p>
+
+    <h3>b) Smart filter bar (front end #1)</h3>
+    <figure>
+      <img src="app_check_images/usability_filters.png" alt="Products filtered to Crewnecks, in stock in XL, price low to high">
+      <figcaption><code>/products?category=Crewnecks&amp;size=XL&amp;in_stock=1&amp;sort=price_asc</code>: category chip,
+        “In my size = XL” (only items with XL stock &gt; 0), “Hide sold out” and price sort. The header reads
+        “23 styles · Crewnecks · Size XL · In stock”, and the filters live in the URL so the view can be shared.</figcaption>
+    </figure>
+    <p class="proves"><strong>Proves:</strong> shoppers can narrow 102 styles to what's actually available in their
+      size in one or two taps.</p>
+  </section>
+
+  <section id="memory">
+    <span class="tag">Bonus</span>
+    <h2>Saved chat history for a logged-in shopper (Problem 8)</h2>
+    <figure>
+      <img src="app_check_images/memory_history.png" alt="Chat history reloaded after logging in from a fresh browser">
+      <figcaption>The test user asked “Hi! Do you know who I am?” and Dan answered with their name and email from
+        agent deps. This screenshot is from a <em>brand-new browser context</em> with no local storage, taken right
+        after logging in again. The conversation is reloaded from the <code>chat_messages</code> table.</figcaption>
+    </figure>
+  </section>
+</main>
+</body>
+</html>

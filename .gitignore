@@ -1,0 +1,25 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# local-only data pack (database + product images)
+data/
+*.db
+*.db-journal
+*.sqlite
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node / Vite
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

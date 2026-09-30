@@ -1,0 +1,9 @@
+# Campus Customs shop backend (Python 3.10+; developed on 3.12)
+#   uv venv --python 3.12 .venv && source .venv/bin/activate
+#   uv pip install -r requirements.txt
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.8
+pydantic-ai-slim[openai]>=2.43,<3
+openai>=3.0
+python-dotenv>=1.0
